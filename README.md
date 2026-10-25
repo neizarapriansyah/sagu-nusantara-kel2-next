@@ -45,4 +45,4 @@ data/
 
 - Data website disimpan di `localStorage` (key `webSagu_db`), sama seperti versi HTML,
   jadi data yang diatur di dashboard admin tetap terbaca.
-- Halaman admin (`/admin/login` dan `/admin/dashboard`) belum dikonversi.
+- Halaman admin ada di `/admin/login` dan `/admin/dashboard` (login default: lihat `lib/auth.ts`).
