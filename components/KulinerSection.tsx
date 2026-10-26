@@ -16,7 +16,7 @@ type KulinerSectionProps = {
 
 const unik = (list: string[]) => [...new Set(list.filter(Boolean))];
 
-// pilihan yang tidak ada lagi (misal datanya dihapus admin) dikembalikan ke "Semua"
+// pilihan yang tidak ada di daftar dikembalikan ke "Semua"
 const validValue = (value: string, options: string[]) => (options.includes(value) ? value : "Semua");
 
 export default function KulinerSection({ foods, regions, foodOptions }: KulinerSectionProps) {

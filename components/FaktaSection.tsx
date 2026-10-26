@@ -14,7 +14,7 @@ type FaktaSectionProps = {
 type VoteType = "like" | "dislike";
 type Votes = Record<string, VoteType>;
 
-// pilihan like / dislike pengunjung disimpen terpisah dari data dashboard
+// pilihan like / dislike pengunjung disimpen di localStorage browser
 // isinya kayak gini: { fc1: "like", fc4: "dislike" }
 const VOTE_KEY = "webSagu_factVotes";
 const LOGO = "/assets/images/logo-sagu.png";

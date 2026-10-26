@@ -1,7 +1,4 @@
-"use client";
-
 // halaman utama ("/"): semua section disusun di sini dan datanya dikirim lewat props
-import { useEffect } from "react";
 import FaktaSection from "@/components/FaktaSection";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
@@ -12,15 +9,10 @@ import PersebaranSection from "@/components/PersebaranSection";
 import ProsesSection from "@/components/ProsesSection";
 import QuizSection from "@/components/QuizSection";
 import TentangSection from "@/components/TentangSection";
-import { useSaguData } from "@/hooks/useSaguData";
+import { DEFAULT_DATA } from "@/data/defaultData";
 
 export default function HomePage() {
-  const db = useSaguData();
-
-  // judul tab browser ikut nama website yang diatur di dashboard
-  useEffect(() => {
-    document.title = db.settings.siteName;
-  }, [db.settings.siteName]);
+  const db = DEFAULT_DATA;
 
   return (
     <>

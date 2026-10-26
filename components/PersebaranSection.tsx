@@ -21,7 +21,7 @@ export default function PersebaranSection({ regions }: PersebaranSectionProps) {
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // kalau wilayah yang dipilih sudah dihapus admin, anggap belum ada yang dipilih
+  // kalau id wilayah tidak ada di data, anggap belum ada yang dipilih
   const ada = (id: string | null) => (regions.some((r) => r.id === id) ? id : null);
   const activeValid = ada(activeId);
   const shownValid = ada(shownId);

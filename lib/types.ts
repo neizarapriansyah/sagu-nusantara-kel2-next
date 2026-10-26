@@ -87,11 +87,3 @@ export type SaguData = {
   quizzes: Quiz[];
   settings: Settings;
 };
-
-export type CollectionKey =
-  | "aboutCards"
-  | "processingSteps"
-  | "foods"
-  | "regions"
-  | "facts"
-  | "quizzes";

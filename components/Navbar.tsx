@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActiveSection } from "@/hooks/useActiveSection";
 
 type NavbarProps = {
@@ -41,16 +40,17 @@ export default function Navbar({ siteName }: NavbarProps) {
           ))}
         </nav>
 
-        <Link
-          href="/admin/login"
+        {/* tombol dashboard admin: tampil dulu, fungsinya menyusul (admin belum dikonversi) */}
+        <button
+          type="button"
           className="settings-button"
-          aria-label="Masuk ke dashboard admin"
-          title="Dashboard admin"
+          aria-label="Dashboard admin (belum tersedia)"
+          title="Dashboard admin (belum tersedia)"
         >
           <svg className="settings-icon" viewBox="0 0 24 24">
             <path d="M19.4 13a7.8 7.8 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a8.2 8.2 0 0 0-1.7-1L15 3.3h-4L10.6 6a8.2 8.2 0 0 0-1.7 1L6.4 6l-2 3.4L6.5 11a7.8 7.8 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1a8.2 8.2 0 0 0 1.7 1l.4 2.7h4l.4-2.7a8.2 8.2 0 0 0 1.7-1l2.5 1 2-3.4L19.4 13zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" />
           </svg>
-        </Link>
+        </button>
       </div>
     </header>
   );

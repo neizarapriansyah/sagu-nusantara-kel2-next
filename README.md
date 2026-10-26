@@ -1,13 +1,14 @@
 # Sagu Nusantara (Next.js)
 
-Konversi website Sagu Nusantara (HTML/CSS/JS) ke Next.js (App Router + TypeScript).
+Konversi halaman utama website Sagu Nusantara (HTML/CSS/JS) ke Next.js (App Router + TypeScript).
 Front-End UTS Project - Kelompok 02.
+
+Progress saat ini: **main page** sudah dikonversi. Dashboard admin belum dikonversi
+(tombol pengaturan di navbar sudah tampil, tetapi belum berfungsi).
 
 ## Cara menjalankan
 
-1. Salin isi folder `assets/` yang lama (`icons/` dan `images/`) ke `public/assets/`,
-   sehingga path-nya jadi `public/assets/images/...` dan `public/assets/icons/...`.
-2. Install dan jalankan:
+Gambar dan ikon sudah ada di `public/assets/` (`images/` dan `icons/`). Tinggal install dan jalankan:
 
 ```bash
 npm install
@@ -33,16 +34,9 @@ components/
   FaktaSection.tsx    VoteButton.tsx
   QuizSection.tsx
 hooks/
-  useSaguData.ts      ambil data dari localStorage (diatur lewat dashboard admin)
   useActiveSection.ts garis bawah menu navbar mengikuti section yang tampil
 lib/
-  types.ts  store.ts  log.ts  util.ts   (port dari data.js)
+  types.ts  util.ts   (tipe data + fungsi kecil, port dari data.js)
 data/
-  defaultData.ts      data awal website
+  defaultData.ts      data website (dari data.js)
 ```
-
-## Catatan
-
-- Data website disimpan di `localStorage` (key `webSagu_db`), sama seperti versi HTML,
-  jadi data yang diatur di dashboard admin tetap terbaca.
-- Halaman admin ada di `/admin/login` dan `/admin/dashboard` (login default: lihat `lib/auth.ts`).

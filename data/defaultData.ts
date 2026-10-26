@@ -1,6 +1,6 @@
 import type { SaguData } from "@/lib/types";
 
-// data awal website, dipakai kalau localStorage masih kosong (dari data.js)
+// data website (dari data.js versi UTS), dikirim ke setiap section lewat props
 export const DEFAULT_DATA: SaguData = {
   // tentang sagu
   aboutCards: [
@@ -234,8 +234,8 @@ export const DEFAULT_DATA: SaguData = {
     }
   ],
 
-  // pilihan dropdown di form kuliner, admin bisa nambah sendiri
-  // (wilayah di sini cuma tambahan, wilayah utama ambil dari menu persebaran)
+  // pilihan dropdown filter kuliner
+  // (wilayah di sini cuma tambahan, wilayah utama ambil dari data persebaran)
   foodOptions: {
     wilayah: [],
     kategori: ["Makanan Utama", "Kue", "Camilan"],

@@ -3,12 +3,8 @@
 // 1 jadi "01"
 export const pad = (n: number): string => String(n).padStart(2, "0");
 
-export function uid(prefix = "id"): string {
-  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-}
-
 // data lama dari website HTML memakai path relatif ("assets/..."), jadi dibuat absolut
-// supaya tetap bisa dimuat dari halaman mana pun. Gambar upload (data:) dan URL penuh dibiarkan.
+// supaya tetap bisa dimuat dari halaman mana pun. URL penuh dibiarkan.
 export function assetSrc(src: string | undefined | null): string {
   if (!src) return "";
   if (/^(https?:|data:|blob:|\/)/.test(src)) return src;
