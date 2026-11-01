@@ -87,3 +87,26 @@ export type SaguData = {
   quizzes: Quiz[];
   settings: Settings;
 };
+
+// tipe tambahan untuk dashboard admin
+
+export type CollectionKey =
+  | "aboutCards"
+  | "processingSteps"
+  | "foods"
+  | "regions"
+  | "facts"
+  | "quizzes";
+
+export type FoodOptionKey = keyof FoodOptions;
+
+// satu baris data apa pun dari koleksi di atas (dibaca generik oleh tabel & form admin)
+export type AdminItem = { id: string } & Record<string, unknown>;
+
+export type ActivityLog = {
+  id: number;
+  action: string;
+  module: string;
+  detail: string;
+  time: string;
+};

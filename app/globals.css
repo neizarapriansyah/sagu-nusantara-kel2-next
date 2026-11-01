@@ -33,7 +33,7 @@ body {
     --line: #d3baa0;
     --brown-soft: #a57f5c;
 
-    /* font sesuai figma: judul pake DM Serif Display, isi pake Plus Jakarta Sans */
+    /* font judul pake DM Serif Display, isi pake Plus Jakarta Sans */
     --font-serif: "DM Serif Display", Georgia, "Times New Roman", serif;
     --font-sans: "Plus Jakarta Sans", "Segoe UI", Arial, sans-serif;
 }

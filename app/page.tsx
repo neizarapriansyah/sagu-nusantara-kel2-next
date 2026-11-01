@@ -9,10 +9,14 @@ import PersebaranSection from "@/components/PersebaranSection";
 import ProsesSection from "@/components/ProsesSection";
 import QuizSection from "@/components/QuizSection";
 import TentangSection from "@/components/TentangSection";
-import { DEFAULT_DATA } from "@/data/defaultData";
+import { getSaguData } from "@/lib/repository";
+
+// data dibaca dari database SQLite setiap halaman dibuka, jadi perubahan dari
+// dashboard admin langsung tampil di website tanpa build ulang
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
-  const db = DEFAULT_DATA;
+  const db = getSaguData();
 
   return (
     <>

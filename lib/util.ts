@@ -11,7 +11,6 @@ export function assetSrc(src: string | undefined | null): string {
   return `/${src}`;
 }
 
-// acak urutan (fisher-yates), dipakai untuk soal quiz
 export function acak<T>(list: T[]): T[] {
   const hasil = [...list];
   for (let i = hasil.length - 1; i > 0; i--) {
@@ -19,4 +18,9 @@ export function acak<T>(list: T[]): T[] {
     [hasil[i], hasil[j]] = [hasil[j], hasil[i]];
   }
   return hasil;
+}
+
+// id unik untuk data baru, contoh "fd" jadi "fdlx3k9a2b1c"
+export function uid(prefix = "id"): string {
+  return `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
