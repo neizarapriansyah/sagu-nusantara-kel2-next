@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, "Username atau password salah. Periksa lagi, lalu coba masuk.");
     }
 
-    logActivity("Login", "Auth", `${username} masuk ke dashboard`);
+    await logActivity("Login", "Auth", `${username} masuk ke dashboard`);
     const res = NextResponse.json({ ok: true });
     res.cookies.set(SESSION_COOKIE, createSessionToken(username), sessionCookieOptions);
     return res;

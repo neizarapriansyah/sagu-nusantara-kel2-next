@@ -16,5 +16,5 @@ export default async function AdminDashboardPage() {
   const session = await getSession();
   if (!session) redirect("/admin/login");
 
-  return <AdminDashboard initialData={getSaguData()} initialActivity={getActivity()} user={session.user} />;
+  return <AdminDashboard initialData={await getSaguData()} initialActivity={await getActivity()} user={session.user} />;
 }

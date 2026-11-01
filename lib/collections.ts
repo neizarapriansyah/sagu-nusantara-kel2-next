@@ -6,13 +6,12 @@ import type { CollectionKey, FoodOptionKey, Settings } from "@/lib/types";
 type FieldKind = "string" | "list" | "number";
 
 export type CollectionField = {
-  prop: string; // nama properti di objek (sama dengan tipe di lib/types.ts)
-  column: string; // nama kolom di tabel
-  kind: FieldKind; // list disimpan sebagai teks JSON
+  prop: string; // nama properti di objek, sama dengan tipe di lib/types.ts dan nama field di schema.prisma
+  kind: FieldKind;
 };
 
 export type CollectionDef = {
-  table: string;
+  model: string; // nama model Prisma (huruf kecil di depan, seperti prisma.food)
   title: string; // nama menu, juga dicatat di riwayat aktivitas
   prefix: string; // awalan id data baru
   noAdd?: boolean;
@@ -21,19 +20,19 @@ export type CollectionDef = {
   fields: CollectionField[];
 };
 
-const str = (prop: string, column = prop): CollectionField => ({ prop, column, kind: "string" });
-const list = (prop: string): CollectionField => ({ prop, column: prop, kind: "list" });
-const num = (prop: string): CollectionField => ({ prop, column: prop, kind: "number" });
+const str = (prop: string): CollectionField => ({ prop, kind: "string" });
+const list = (prop: string): CollectionField => ({ prop, kind: "list" });
+const num = (prop: string): CollectionField => ({ prop, kind: "number" });
 
 export const COLLECTIONS: Record<CollectionKey, CollectionDef> = {
   aboutCards: {
-    table: "about_cards",
+    model: "aboutCard",
     title: "Tentang Sagu",
     prefix: "ab",
     fields: [str("title"), str("image"), str("description")],
   },
   processingSteps: {
-    table: "processing_steps",
+    model: "processingStep",
     title: "Proses Pengolahan",
     prefix: "st",
     reorder: true,
@@ -42,14 +41,14 @@ export const COLLECTIONS: Record<CollectionKey, CollectionDef> = {
     fields: [str("title"), str("icon"), str("image"), str("description")],
   },
   foods: {
-    table: "foods",
+    model: "food",
     title: "Kuliner Sagu",
     prefix: "fd",
     fields: [
       str("name"),
       str("region"),
       str("category"),
-      str("servingType", "serving_type"),
+      str("servingType"),
       str("image"),
       str("description"),
       list("ingredients"),
@@ -59,12 +58,12 @@ export const COLLECTIONS: Record<CollectionKey, CollectionDef> = {
     ],
   },
   regions: {
-    table: "regions",
+    model: "region",
     title: "Persebaran",
     prefix: "rg",
     fields: [
       str("name"),
-      str("mapIcon", "map_icon"),
+      str("mapIcon"),
       str("image"),
       str("description"),
       list("foods"),
@@ -72,21 +71,21 @@ export const COLLECTIONS: Record<CollectionKey, CollectionDef> = {
     ],
   },
   facts: {
-    table: "facts",
+    model: "fact",
     title: "Fakta Menarik",
     prefix: "fc",
     fields: [str("text"), str("image"), num("likes"), num("dislikes")],
   },
   quizzes: {
-    table: "quizzes",
+    model: "quiz",
     title: "Quiz",
     prefix: "qz",
     fields: [
       str("question"),
-      str("optionA", "option_a"),
-      str("optionB", "option_b"),
-      str("optionC", "option_c"),
-      str("optionD", "option_d"),
+      str("optionA"),
+      str("optionB"),
+      str("optionC"),
+      str("optionD"),
       str("correct"),
     ],
   },

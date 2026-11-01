@@ -1,6 +1,5 @@
 // semua query ke database ada di file ini (pengganti SaguStore + SaguLog di data.js UTS).
-// komponen dan route API tidak boleh menulis SQL sendiri. saat pindah ke Prisma,
-// cukup isi ulang fungsi-fungsi di sini dan sisanya tidak perlu diubah.
+// komponen dan route API tidak boleh memanggil Prisma langsung, semuanya lewat fungsi di sini.
 import { DEFAULT_DATA } from "@/data/defaultData";
 import {
   COLLECTIONS,
@@ -11,20 +10,11 @@ import {
   cleanValues,
   itemLabel,
   toList,
-  type CollectionDef,
 } from "@/lib/collections";
-import { getDb } from "@/lib/db";
 import { ApiError } from "@/lib/errors";
-import { insertItem, replaceAllData } from "@/lib/seed";
-import type {
-  ActivityLog,
-  AdminItem,
-  CollectionKey,
-  FoodOptionKey,
-  FoodOptions,
-  SaguData,
-  Settings,
-} from "@/lib/types";
+import { prisma } from "@/lib/prisma";
+import { replaceAllData } from "@/lib/seed";
+import type { ActivityLog, AdminItem, CollectionKey, FoodOptionKey, FoodOptions, SaguData, Settings } from "@/lib/types";
 import { isDataUrl, persistImages, pruneUploads, removeUpload } from "@/lib/uploads";
 import { uid } from "@/lib/util";
 
@@ -32,124 +22,130 @@ const MAX_ACTIVITY = 30;
 
 type Row = Record<string, unknown>;
 
-function parseJsonList(value: unknown): string[] {
-  try {
-    const parsed = JSON.parse(String(value ?? "[]"));
-    return Array.isArray(parsed) ? parsed.map(String) : [];
-  } catch {
-    return [];
-  }
+// model Prisma dipilih lewat nama di COLLECTIONS, jadi satu set fungsi dipakai untuk semua koleksi
+type Delegate = {
+  findMany(args?: unknown): Promise<Row[]>;
+  findUnique(args: unknown): Promise<Row | null>;
+  create(args: unknown): Promise<Row>;
+  update(args: unknown): Promise<Row>;
+  delete(args: unknown): Promise<Row>;
+  aggregate(args: unknown): Promise<{ _max: { position: number | null } }>;
+};
+
+function delegate(key: CollectionKey): Delegate {
+  return (prisma as unknown as Record<string, Delegate>)[COLLECTIONS[key].model];
 }
 
-// baris tabel (snake_case) jadi objek yang dipakai website (camelCase)
-function rowToItem(def: CollectionDef, row: Row): AdminItem {
+// baris dari database jadi objek yang dipakai website (hanya field yang dikenal, tanpa kolom position)
+function rowToItem(key: CollectionKey, row: Row): AdminItem {
   const item: AdminItem = { id: String(row.id) };
-  for (const f of def.fields) {
-    const value = row[f.column];
-    item[f.prop] = f.kind === "list" ? parseJsonList(value) : f.kind === "number" ? Number(value) || 0 : String(value ?? "");
+  for (const f of COLLECTIONS[key].fields) {
+    const value = row[f.prop];
+    item[f.prop] = f.kind === "list" ? toList(value) : f.kind === "number" ? Number(value) || 0 : String(value ?? "");
   }
   return item;
 }
 
-export function getCollection(key: CollectionKey): AdminItem[] {
-  const def = COLLECTIONS[key];
-  const rows = getDb().prepare(`SELECT * FROM ${def.table} ORDER BY position, rowid`).all() as Row[];
-  return rows.map((row) => rowToItem(def, row));
+// seed awal: dijalankan sekali saat database masih kosong (dan lewat `npx prisma db seed`)
+export async function ensureSeeded() {
+  const seeded = await prisma.appMeta.findUnique({ where: { key: "seeded" } });
+  if (seeded) return;
+  await replaceAllData(DEFAULT_DATA);
+  await prisma.appMeta.upsert({ where: { key: "seeded" }, update: {}, create: { key: "seeded", value: "1" } });
 }
 
-function getItem(key: CollectionKey, id: string): AdminItem | undefined {
-  const def = COLLECTIONS[key];
-  const row = getDb().prepare(`SELECT * FROM ${def.table} WHERE id = ?`).get(id) as Row | undefined;
-  return row ? rowToItem(def, row) : undefined;
+export async function getCollection(key: CollectionKey): Promise<AdminItem[]> {
+  const rows = await delegate(key).findMany({ orderBy: [{ position: "asc" }, { id: "asc" }] });
+  return rows.map((row) => rowToItem(key, row));
 }
 
-export function getFoodOptions(): FoodOptions {
-  const rows = getDb().prepare("SELECT type, value FROM food_options ORDER BY position, id").all() as {
-    type: FoodOptionKey;
-    value: string;
-  }[];
+async function getItem(key: CollectionKey, id: string): Promise<AdminItem | undefined> {
+  const row = await delegate(key).findUnique({ where: { id } });
+  return row ? rowToItem(key, row) : undefined;
+}
+
+export async function getFoodOptions(): Promise<FoodOptions> {
+  const rows = await prisma.foodOption.findMany({ orderBy: [{ position: "asc" }, { id: "asc" }] });
   const options: FoodOptions = { wilayah: [], kategori: [], penyajian: [] };
-  for (const row of rows) options[row.type]?.push(row.value);
+  for (const row of rows) options[row.type as FoodOptionKey]?.push(row.value);
   return options;
 }
 
-export function getSettings(): Settings {
-  const rows = getDb().prepare("SELECT key, value FROM site_settings").all() as { key: string; value: string }[];
+export async function getSettings(): Promise<Settings> {
+  const rows = await prisma.siteSetting.findMany();
   const stored = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   // pengaturan yang belum ada diisi data awal, sama seperti SaguStore.load() di UTS
   return { ...DEFAULT_DATA.settings, ...stored };
 }
 
 // seluruh data website, dipakai halaman utama dan dashboard
-export function getSaguData(): SaguData {
+export async function getSaguData(): Promise<SaguData> {
+  await ensureSeeded();
+  const [aboutCards, processingSteps, foods, regions, facts, quizzes, foodOptions, settings] = await Promise.all([
+    getCollection("aboutCards"),
+    getCollection("processingSteps"),
+    getCollection("foods"),
+    getCollection("regions"),
+    getCollection("facts"),
+    getCollection("quizzes"),
+    getFoodOptions(),
+    getSettings(),
+  ]);
+
   return {
-    aboutCards: getCollection("aboutCards") as unknown as SaguData["aboutCards"],
-    processingSteps: getCollection("processingSteps") as unknown as SaguData["processingSteps"],
-    foods: getCollection("foods") as unknown as SaguData["foods"],
-    foodOptions: getFoodOptions(),
-    regions: getCollection("regions") as unknown as SaguData["regions"],
-    facts: getCollection("facts") as unknown as SaguData["facts"],
-    quizzes: getCollection("quizzes") as unknown as SaguData["quizzes"],
-    settings: getSettings(),
+    aboutCards: aboutCards as unknown as SaguData["aboutCards"],
+    processingSteps: processingSteps as unknown as SaguData["processingSteps"],
+    foods: foods as unknown as SaguData["foods"],
+    foodOptions,
+    regions: regions as unknown as SaguData["regions"],
+    facts: facts as unknown as SaguData["facts"],
+    quizzes: quizzes as unknown as SaguData["quizzes"],
+    settings,
   };
 }
 
 // riwayat aktivitas
 
-export function logActivity(action: string, module: string, detail: string) {
-  const db = getDb();
-  db.prepare("INSERT INTO activity_log (action, module, detail, created_at) VALUES (?, ?, ?, ?)").run(
-    action,
-    module,
-    detail,
-    new Date().toISOString(),
-  );
+export async function logActivity(action: string, module: string, detail: string) {
+  await prisma.activityLog.create({ data: { action, module, detail } });
+
   // simpan 30 catatan terakhir saja
-  db.prepare(
-    "DELETE FROM activity_log WHERE id NOT IN (SELECT id FROM activity_log ORDER BY id DESC LIMIT ?)",
-  ).run(MAX_ACTIVITY);
+  const keep = await prisma.activityLog.findMany({ orderBy: { id: "desc" }, take: MAX_ACTIVITY, select: { id: true } });
+  await prisma.activityLog.deleteMany({ where: { id: { notIn: keep.map((r) => r.id) } } });
 }
 
-export function getActivity(limit = 8): ActivityLog[] {
-  const rows = getDb()
-    .prepare("SELECT id, action, module, detail, created_at FROM activity_log ORDER BY id DESC LIMIT ?")
-    .all(limit) as { id: number; action: string; module: string; detail: string; created_at: string }[];
-  return rows.map((r) => ({ id: r.id, action: r.action, module: r.module, detail: r.detail, time: r.created_at }));
+export async function getActivity(limit = 8): Promise<ActivityLog[]> {
+  const rows = await prisma.activityLog.findMany({ orderBy: { id: "desc" }, take: limit });
+  return rows.map((r) => ({ id: r.id, action: r.action, module: r.module, detail: r.detail, time: r.createdAt.toISOString() }));
 }
 
-export function clearActivity() {
-  getDb().prepare("DELETE FROM activity_log").run();
+export async function clearActivity() {
+  await prisma.activityLog.deleteMany();
 }
 
 // tambah, ubah, hapus, urutkan
 
-export function createItem(key: CollectionKey, input: unknown): AdminItem {
+export async function createItem(key: CollectionKey, input: unknown): Promise<AdminItem> {
   const def = COLLECTIONS[key];
   if (def.noAdd) throw new ApiError(403, "Menu ini tidak bisa menambah data.");
 
   const values = persistImages(cleanValues(key, input));
-  const db = getDb();
+  const { _max } = await delegate(key).aggregate({ _max: { position: true } });
   const item: AdminItem = { id: uid(def.prefix), ...values };
 
-  const { next } = db.prepare(`SELECT COALESCE(MAX(position), -1) + 1 AS next FROM ${def.table}`).get() as { next: number };
-  insertItem(db, def, item, next);
+  await delegate(key).create({ data: { ...item, position: (_max.position ?? -1) + 1 } });
 
-  logActivity("Tambah", def.title, `${itemLabel(item)} ditambahkan`);
+  await logActivity("Tambah", def.title, `${itemLabel(item)} ditambahkan`);
   return item;
 }
 
-export function updateItem(key: CollectionKey, id: string, input: unknown): AdminItem {
+export async function updateItem(key: CollectionKey, id: string, input: unknown): Promise<AdminItem> {
   const def = COLLECTIONS[key];
-  const old = getItem(key, id);
+  const old = await getItem(key, id);
   if (!old) throw new ApiError(404, "Data ini sudah tidak ada, mungkin sudah dihapus.");
 
   const values = persistImages(cleanValues(key, input));
-  const sets = def.fields.map((f) => `${f.column} = @${f.column}`).join(", ");
-  const params: Row = { id };
-  for (const f of def.fields) {
-    params[f.column] = f.kind === "list" ? JSON.stringify(values[f.prop]) : values[f.prop];
-  }
-  getDb().prepare(`UPDATE ${def.table} SET ${sets} WHERE id = @id`).run(params);
+  await delegate(key).update({ where: { id }, data: values });
 
   // gambar lama yang sudah diganti tidak perlu disimpan lagi
   for (const f of def.fields) {
@@ -157,80 +153,83 @@ export function updateItem(key: CollectionKey, id: string, input: unknown): Admi
   }
 
   const item: AdminItem = { ...old, ...values };
-  logActivity("Ubah", def.title, `${itemLabel(item)} diperbarui`);
+  await logActivity("Ubah", def.title, `${itemLabel(item)} diperbarui`);
   return item;
 }
 
-export function deleteItem(key: CollectionKey, id: string) {
+export async function deleteItem(key: CollectionKey, id: string) {
   const def = COLLECTIONS[key];
   if (def.noDelete) throw new ApiError(403, "Data di menu ini tidak bisa dihapus.");
 
-  const old = getItem(key, id);
+  const old = await getItem(key, id);
   if (!old) throw new ApiError(404, "Data ini sudah tidak ada, mungkin sudah dihapus.");
 
-  getDb().prepare(`DELETE FROM ${def.table} WHERE id = ?`).run(id);
+  await delegate(key).delete({ where: { id } });
   for (const f of def.fields) removeUpload(old[f.prop]);
-  logActivity("Hapus", def.title, `${itemLabel(old)} dihapus`);
+  await logActivity("Hapus", def.title, `${itemLabel(old)} dihapus`);
 }
 
 // tukar posisi dengan data di atas / bawahnya (tombol naik / turun)
-export function moveItem(key: CollectionKey, id: string, direction: "up" | "down"): AdminItem[] {
+export async function moveItem(key: CollectionKey, id: string, direction: "up" | "down"): Promise<AdminItem[]> {
   const def = COLLECTIONS[key];
   if (!def.reorder) throw new ApiError(403, "Urutan menu ini tidak bisa diubah.");
 
-  const db = getDb();
-  const items = getCollection(key);
+  const items = await getCollection(key);
   const index = items.findIndex((x) => x.id === id);
   const target = direction === "up" ? index - 1 : index + 1;
   if (index < 0 || target < 0 || target >= items.length) return items;
 
   [items[index], items[target]] = [items[target], items[index]];
-  const setPosition = db.prepare(`UPDATE ${def.table} SET position = ? WHERE id = ?`);
-  db.transaction(() => items.forEach((item, position) => setPosition.run(position, item.id)))();
+  await prisma.$transaction(
+    items.map((item, position) => delegate(key).update({ where: { id: item.id }, data: { position } }) as never),
+  );
 
-  logActivity("Urutkan", def.title, `${itemLabel(items[target])} dipindah ke posisi ${target + 1}`);
+  await logActivity("Urutkan", def.title, `${itemLabel(items[target])} dipindah ke posisi ${target + 1}`);
   return items;
 }
 
 // pengaturan website & opsi dropdown
 
-export function updateSettings(input: unknown): Settings {
+export async function updateSettings(input: unknown): Promise<Settings> {
   const values = persistImages(cleanSettings(input)) as Partial<Settings>;
-  const old = getSettings();
-  const db = getDb();
+  const old = await getSettings();
 
-  const save = db.prepare("INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
-  db.transaction(() => {
-    for (const { key } of SETTINGS_KEYS) save.run(key, values[key] ?? "");
-  })();
+  await prisma.$transaction(
+    SETTINGS_KEYS.map(({ key }) =>
+      prisma.siteSetting.upsert({
+        where: { key },
+        update: { value: values[key] ?? "" },
+        create: { key, value: values[key] ?? "" },
+      }),
+    ),
+  );
 
   for (const { key } of SETTINGS_KEYS) {
     if (old[key] !== values[key]) removeUpload(old[key]);
   }
 
-  logActivity("Ubah", "Pengaturan", "Pengaturan website diperbarui");
+  await logActivity("Ubah", "Pengaturan", "Pengaturan website diperbarui");
   return getSettings();
 }
 
 // tambah pilihan dropdown baru. kalau sudah ada (beda huruf besar kecil saja)
 // pilihan lama yang dipakai, jadi tidak ada duplikat
-export function addFoodOption(
+export async function addFoodOption(
   type: FoodOptionKey,
   input: unknown,
-): { value: string; created: boolean; options: FoodOptions } {
+): Promise<{ value: string; created: boolean; options: FoodOptions }> {
   const text = String(input ?? "").trim().replace(/\s+/g, " ");
   if (!text) throw new ApiError(400, "Isian tidak boleh kosong.");
 
-  const existing = getFoodOptions()[type].find((v) => v.toLowerCase() === text.toLowerCase());
-  if (existing) return { value: existing, created: false, options: getFoodOptions() };
+  const existing = (await getFoodOptions())[type].find((v) => v.toLowerCase() === text.toLowerCase());
+  if (existing) return { value: existing, created: false, options: await getFoodOptions() };
 
-  const db = getDb();
-  const { next } = db.prepare("SELECT COALESCE(MAX(position), -1) + 1 AS next FROM food_options WHERE type = ?").get(type) as { next: number };
-  db.prepare("INSERT INTO food_options (type, value, position) VALUES (?, ?, ?)").run(type, text, next);
+  const { _max } = await prisma.foodOption.aggregate({ where: { type }, _max: { position: true } });
+  await prisma.foodOption.create({ data: { type, value: text, position: (_max.position ?? -1) + 1 } });
 
   const label = type === "penyajian" ? "jenis penyajian" : type;
-  logActivity("Tambah", "Kuliner Sagu", `Opsi ${label} "${text}" ditambahkan`);
-  return { value: text, created: true, options: getFoodOptions() };
+  await logActivity("Tambah", "Kuliner Sagu", `Opsi ${label} "${text}" ditambahkan`);
+  return { value: text, created: true, options: await getFoodOptions() };
 }
 
 // export, import, reset
@@ -280,31 +279,29 @@ function normalizeImport(raw: unknown): SaguData {
   );
 
   const settings = { ...DEFAULT_DATA.settings, ...((source.settings as object) ?? {}) } as Settings;
-  data.settings = persistImages(
-    Object.fromEntries(SETTINGS_KEYS.map(({ key }) => [key, String(settings[key] ?? "")])),
-  );
+  data.settings = persistImages(Object.fromEntries(SETTINGS_KEYS.map(({ key }) => [key, String(settings[key] ?? "")])));
 
   return data as unknown as SaguData;
 }
 
-export function exportData(): SaguData {
-  logActivity("Export", "Data", "Seluruh konten diekspor ke JSON");
+export async function exportData(): Promise<SaguData> {
+  await logActivity("Export", "Data", "Seluruh konten diekspor ke JSON");
   return getSaguData();
 }
 
-export function importData(raw: unknown, fileName: string): SaguData {
+export async function importData(raw: unknown, fileName: string): Promise<SaguData> {
   // normalizeImport dijalankan dulu: file JSON yang rusak ditolak sebelum data lama disentuh
-  replaceAllData(getDb(), normalizeImport(raw));
-  const data = getSaguData();
+  await replaceAllData(normalizeImport(raw));
+  const data = await getSaguData();
   pruneUploads(JSON.stringify(data));
-  logActivity("Import", "Data", `Konten diimpor dari ${fileName}`);
+  await logActivity("Import", "Data", `Konten diimpor dari ${fileName}`);
   return data;
 }
 
-export function resetData(): SaguData {
-  replaceAllData(getDb(), DEFAULT_DATA);
-  const data = getSaguData();
+export async function resetData(): Promise<SaguData> {
+  await replaceAllData(DEFAULT_DATA);
+  const data = await getSaguData();
   pruneUploads(JSON.stringify(data));
-  logActivity("Reset", "Database", "Data dikembalikan ke kondisi awal");
+  await logActivity("Reset", "Database", "Data dikembalikan ke kondisi awal");
   return data;
 }

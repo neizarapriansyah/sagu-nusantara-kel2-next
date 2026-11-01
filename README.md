@@ -4,8 +4,7 @@ Konversi website Sagu Nusantara (HTML/CSS/JS) ke Next.js (App Router + TypeScrip
 Front-End UTS Project - Kelompok 02.
 
 Progress saat ini: **main page** dan **dashboard admin** sudah dikonversi. Data website sekarang
-disimpan di **SQLite** (bukan lagi `localStorage`) dan struktur tabelnya disiapkan agar mudah
-dipindah ke Postgres lewat Prisma.
+disimpan di **Postgres (Supabase) lewat Prisma**, bukan lagi `localStorage`.
 
 ## Cara menjalankan
 
@@ -17,8 +16,19 @@ npm run dev      # buka http://localhost:3000
 npm run build    # build produksi
 ```
 
-Database SQLite dibuat otomatis di `storage/sagu.db` saat pertama kali dibuka dan langsung diisi
-data awal dari `data/defaultData.ts`. Pengaturan opsional ada di `.env.example` (salin jadi `.env`).
+### Setup database (sekali saja)
+
+1. Salin `.env.example` jadi `.env`, lalu isi `DATABASE_URL` dan `DIRECT_URL` dari Supabase
+   (Project Settings → Database → Connection string).
+2. Terapkan tabel ke database dan isi data awal:
+
+```bash
+npx prisma migrate deploy   # membuat tabel sesuai folder prisma/migrations
+npx prisma db seed          # mengisi data awal dari data/defaultData.ts
+```
+
+Folder `generated/` (client Prisma) dibuat otomatis oleh `npm install` (script `postinstall`).
+Kalau mengubah `prisma/schema.prisma`, jalankan `npm run db:migrate` lalu commit folder `prisma/migrations`.
 
 ## Dashboard admin
 
@@ -29,13 +39,6 @@ data awal dari `data/defaultData.ts`. Pengaturan opsional ada di `.env.example` 
   dropdown, urutan tahap proses, pengaturan website, ringkasan + aktivitas, export / import / reset JSON.
 - Gambar upload disimpan sebagai file di `storage/uploads/` dan dilayani lewat `/api/uploads/...`.
 - Sesi login memakai cookie httpOnly bertanda tangan (berlaku 8 jam). Ganti `SESSION_SECRET` saat deploy.
-
-## Pindah ke Postgres + Prisma
-
-Semua query ada di `lib/repository.ts` (tidak ada SQL di komponen atau route), skema tabel ada di
-`lib/db.ts`. Saat memakai Prisma, buat model dengan nama kolom yang sama, lalu isi ulang fungsi di
-`lib/repository.ts` dengan `prisma.*`. Kolom daftar (`ingredients`, `foods`) saat ini berupa teks JSON
-dan bisa dijadikan `String[]` / `Json` di Postgres.
 
 ## Struktur
 
@@ -68,12 +71,15 @@ components/ (admin)
   AdminFormModal.tsx  AdminField.tsx  AdminConfirm.tsx  AdminLoginForm.tsx  AdminMedia.tsx
 lib/
   types.ts  util.ts   (tipe data + fungsi kecil, port dari data.js)
-  db.ts seed.ts       koneksi SQLite, skema tabel, data awal
-  repository.ts       seluruh query database (titik pindah ke Prisma)
+  prisma.ts seed.ts   koneksi Prisma + fungsi isi ulang data
+  repository.ts       seluruh query database (semua fungsi async)
   collections.ts      definisi tabel/kolom + validasi kiriman form
   auth.ts uploads.ts  sesi login, penyimpanan gambar upload
   adminApi.ts adminClient.ts  pembungkus route API (server) dan pemanggil API (browser)
   adminModules.tsx adminForm.ts  konfigurasi menu/form/tabel dashboard + fungsi form
+prisma/
+  schema.prisma  seed.ts  migrations/   skema Postgres, data awal, riwayat migrasi
+prisma.config.ts      konfigurasi Prisma CLI
 data/
   defaultData.ts      data website (dari data.js)
 ```

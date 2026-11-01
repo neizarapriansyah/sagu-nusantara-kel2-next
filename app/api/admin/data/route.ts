@@ -4,4 +4,4 @@ import { getSaguData } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 
-export const GET = adminRoute(() => getSaguData());
+export const GET = adminRoute(async () => getSaguData());

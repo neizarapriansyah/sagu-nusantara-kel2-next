@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AboutCard {
+  id          String @id
+  title       String
+  image       String
+  description String
+  position    Int    @default(0)
+
+  @@map("about_cards")
+}
+
+model ProcessingStep {
+  id          String @id
+  title       String
+  icon        String
+  image       String
+  description String
+  position    Int    @default(0)
+
+  @@map("processing_steps")
+}
+
+model Food {
+  id          String   @id
+  name        String
+  region      String
+  category    String
+  servingType String   @map("serving_type")
+  image       String
+  description String
+  ingredients String[]
+  preparation String
+  story       String
+  fact        String
+  position    Int      @default(0)
+
+  @@map("foods")
+}
+
+model Region {
+  id          String   @id
+  name        String
+  mapIcon     String   @map("map_icon")
+  image       String
+  description String
+  foods       String[]
+  facts       String
+  position    Int      @default(0)
+
+  @@map("regions")
+}
+
+model Fact {
+  id       String @id
+  text     String
+  image    String
+  likes    Int    @default(0)
+  dislikes Int    @default(0)
+  position Int    @default(0)
+
+  @@map("facts")
+}
+
+model Quiz {
+  id       String @id
+  question String
+  optionA  String @map("option_a")
+  optionB  String @map("option_b")
+  optionC  String @map("option_c")
+  optionD  String @map("option_d")
+  correct  String
+  position Int    @default(0)
+
+  @@map("quizzes")
+}
+
+model FoodOption {
+  id       Int    @id @default(autoincrement())
+  type     String
+  value    String
+  position Int    @default(0)
+
+  @@unique([type, value])
+  @@map("food_options")
+}
+
+model SiteSetting {
+  key   String @id
+  value String
+
+  @@map("site_settings")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  module    String
+  detail    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("activity_log")
+}
+
+model AppMeta {
+  key   String @id
+  value String
+
+  @@map("app_meta")
+}

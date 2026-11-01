@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/repository";
 
 export async function POST() {
   const session = await getSession();
-  if (session) logActivity("Logout", "Auth", `${session.user} keluar dari dashboard`);
+  if (session) await logActivity("Logout", "Auth", `${session.user} keluar dari dashboard`);
 
   const res = NextResponse.json({ ok: true });
   res.cookies.delete(SESSION_COOKIE);

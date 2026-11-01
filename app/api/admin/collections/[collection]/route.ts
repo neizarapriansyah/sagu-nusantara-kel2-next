@@ -6,5 +6,5 @@ import { createItem } from "@/lib/repository";
 
 export const POST = adminRoute(async (req, { collection }) => {
   if (!isCollectionKey(collection)) throw new ApiError(404, "Menu tidak ditemukan.");
-  return { item: createItem(collection, await readJson(req)) };
+  return { item: await createItem(collection, await readJson(req)) };
 });

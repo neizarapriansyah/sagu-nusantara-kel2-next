@@ -6,11 +6,11 @@ import { deleteItem, updateItem } from "@/lib/repository";
 
 export const PUT = adminRoute(async (req, { collection, id }) => {
   if (!isCollectionKey(collection)) throw new ApiError(404, "Menu tidak ditemukan.");
-  return { item: updateItem(collection, id, await readJson(req)) };
+  return { item: await updateItem(collection, id, await readJson(req)) };
 });
 
-export const DELETE = adminRoute((_req, { collection, id }) => {
+export const DELETE = adminRoute(async (_req, { collection, id }) => {
   if (!isCollectionKey(collection)) throw new ApiError(404, "Menu tidak ditemukan.");
-  deleteItem(collection, id);
+  await deleteItem(collection, id);
   return { ok: true };
 });
