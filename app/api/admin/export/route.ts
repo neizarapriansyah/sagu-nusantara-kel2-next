@@ -4,8 +4,8 @@ import { exportData } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 
-export const GET = adminRoute(() => {
-  const body = JSON.stringify(exportData(), null, 2);
+export const GET = adminRoute(async () => {
+  const body = JSON.stringify(await exportData(), null, 2);
   return new Response(body, {
     headers: {
       "Content-Type": "application/json",

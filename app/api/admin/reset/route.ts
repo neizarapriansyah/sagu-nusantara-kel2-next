@@ -2,4 +2,4 @@
 import { adminRoute } from "@/lib/adminApi";
 import { resetData } from "@/lib/repository";
 
-export const POST = adminRoute(() => ({ data: resetData() }));
+export const POST = adminRoute(async () => ({ data: await resetData() }));

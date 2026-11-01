@@ -7,5 +7,5 @@ import { addFoodOption } from "@/lib/repository";
 export const POST = adminRoute(async (req) => {
   const { key, value } = (await readJson(req)) as { key?: unknown; value?: unknown };
   if (!isFoodOptionKey(key)) throw new ApiError(400, "Jenis opsi tidak valid.");
-  return addFoodOption(key, value);
+  return await addFoodOption(key, value);
 });

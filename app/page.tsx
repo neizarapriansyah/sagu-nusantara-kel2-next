@@ -11,12 +11,12 @@ import QuizSection from "@/components/QuizSection";
 import TentangSection from "@/components/TentangSection";
 import { getSaguData } from "@/lib/repository";
 
-// data dibaca dari database SQLite setiap halaman dibuka, jadi perubahan dari
+// data dibaca dari database Postgres setiap halaman dibuka, jadi perubahan dari
 // dashboard admin langsung tampil di website tanpa build ulang
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
-  const db = getSaguData();
+export default async function HomePage() {
+  const db = await getSaguData();
 
   return (
     <>

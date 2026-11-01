@@ -9,5 +9,5 @@ export const POST = adminRoute(async (req, { collection, id }) => {
 
   const { direction } = (await readJson(req)) as { direction?: string };
   if (direction !== "up" && direction !== "down") throw new ApiError(400, "Arah urutan tidak valid.");
-  return { items: moveItem(collection, id, direction) };
+  return { items: await moveItem(collection, id, direction) };
 });

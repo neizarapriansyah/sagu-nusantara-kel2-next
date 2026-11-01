@@ -4,9 +4,9 @@ import { clearActivity, getActivity } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 
-export const GET = adminRoute(() => ({ activity: getActivity() }));
+export const GET = adminRoute(async () => ({ activity: await getActivity() }));
 
-export const DELETE = adminRoute(() => {
-  clearActivity();
+export const DELETE = adminRoute(async () => {
+  await clearActivity();
   return { ok: true };
 });
