@@ -4,31 +4,50 @@ Konversi website Sagu Nusantara (HTML/CSS/JS) ke Next.js (App Router + TypeScrip
 Front-End UTS Project - Kelompok 02.
 
 Progress saat ini: **main page** dan **dashboard admin** sudah dikonversi. Data website sekarang
-disimpan di **Postgres (Supabase) lewat Prisma**, bukan lagi `localStorage`.
+disimpan di **Prisma Postgres** (database PostgreSQL online) lewat **Prisma ORM**, bukan lagi `localStorage`.
 
-## Cara menjalankan
+## Cara menjalankan di laptop sendiri (untuk anggota kelompok)
 
-Gambar dan ikon sudah ada di `public/assets/` (`images/` dan `icons/`). Tinggal install dan jalankan:
+Yang perlu ada di laptop: **Node.js 20 atau lebih baru** dan **Git**.
+
+1. Ambil project lalu install. `npm install` juga otomatis membuat Prisma Client di folder `generated/`.
 
 ```bash
+git clone https://github.com/neizarapriansyah/sagu-nusantara-kel2-next.git
+cd sagu-nusantara-kel2-next
 npm install
-npm run dev      # buka http://localhost:3000
-npm run build    # build produksi
 ```
 
-### Setup database (sekali saja)
+2. Salin `.env.example` jadi `.env`, lalu isi `DATABASE_URL` dan `DIRECT_URL`.
+   Minta isinya ke pemegang database kelompok lewat chat pribadi. **Jangan** di-commit ke Git
+   (`.env` sudah ada di `.gitignore`). Semua anggota memakai database yang sama, jadi data yang
+   ditambah satu orang langsung terlihat oleh yang lain.
 
-1. Salin `.env.example` jadi `.env`, lalu isi `DATABASE_URL` dan `DIRECT_URL` dari Supabase
-   (Project Settings → Database → Connection string).
-2. Terapkan tabel ke database dan isi data awal:
+3. Jalankan:
 
 ```bash
-npx prisma migrate deploy   # membuat tabel sesuai folder prisma/migrations
-npx prisma db seed          # mengisi data awal dari data/defaultData.ts
+npm run dev      # buka http://localhost:3000
 ```
 
-Folder `generated/` (client Prisma) dibuat otomatis oleh `npm install` (script `postinstall`).
-Kalau mengubah `prisma/schema.prisma`, jalankan `npm run db:migrate` lalu commit folder `prisma/migrations`.
+Tidak perlu `db:deploy` atau `db:seed`: tabel dan data awal sudah ada di database kelompok.
+
+### Perintah database (hati-hati)
+
+```bash
+npm run db:deploy   # membuat tabel sesuai prisma/migrations (aman dijalankan ulang)
+npm run db:seed     # MENGHAPUS semua konten lalu mengisi ulang data awal dari data/defaultData.ts
+npm run db:migrate  # setelah mengubah prisma/schema.prisma; commit folder prisma/migrations
+npx prisma studio   # lihat dan edit isi tabel lewat browser
+```
+
+`db:seed` dan tombol Reset di dashboard mengosongkan data **semua anggota**, karena databasenya dipakai bersama.
+
+### Membuat database baru (cukup satu orang)
+
+1. Di [Prisma Console](https://console.prisma.io) buat project + database Prisma Postgres (region Singapore).
+2. Buka database → **Connect to your database** → **Generate new connection string**. Salin alamat
+   pooled ke `DATABASE_URL` dan alamat direct ke `DIRECT_URL`.
+3. Jalankan `npm run db:deploy` lalu `npm run db:seed`, kemudian bagikan isi `.env` ke anggota lain.
 
 ## Dashboard admin
 
@@ -37,7 +56,8 @@ Kalau mengubah `prisma/schema.prisma`, jalankan `npm run db:migrate` lalu commit
 - Dashboard: `/admin/dashboard`, berpindah menu lewat `#hash` seperti versi UTS.
 - Fitur sama dengan versi UTS: CRUD semua konten, upload gambar (otomatis dikecilkan), tambah opsi
   dropdown, urutan tahap proses, pengaturan website, ringkasan + aktivitas, export / import / reset JSON.
-- Gambar upload disimpan sebagai file di `storage/uploads/` dan dilayani lewat `/api/uploads/...`.
+- Gambar upload disimpan sebagai file di `storage/uploads/` **di laptop masing-masing** (tidak masuk database
+  maupun Git), lalu dilayani lewat `/api/uploads/...`. Gambar yang di-upload anggota lain tidak akan tampil di laptopmu.
 - Sesi login memakai cookie httpOnly bertanda tangan (berlaku 8 jam). Ganti `SESSION_SECRET` saat deploy.
 
 ## Struktur
@@ -78,7 +98,7 @@ lib/
   adminApi.ts adminClient.ts  pembungkus route API (server) dan pemanggil API (browser)
   adminModules.tsx adminForm.ts  konfigurasi menu/form/tabel dashboard + fungsi form
 prisma/
-  schema.prisma  seed.ts  migrations/   skema Postgres, data awal, riwayat migrasi
+  schema.prisma  seed.ts  migrations/   skema database, data awal, riwayat migrasi
 prisma.config.ts      konfigurasi Prisma CLI
 data/
   defaultData.ts      data website (dari data.js)
